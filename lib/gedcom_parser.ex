@@ -24,9 +24,8 @@ defmodule GedcomParser do
     "DEAT" => &Transforms.is_dead?/1
   }
 
-  def process_file() do
-    path = "/home/gordon/work/gedcom_parser/test.ged"
-    stream = File.stream!(path, [:utf8], :line)
+  def process_file(filepath) do
+    stream = File.stream!(filepath, [:utf8], :line)
 
     output = %{
       persons: [],
