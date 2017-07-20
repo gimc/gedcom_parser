@@ -41,8 +41,8 @@ defmodule GedcomParser do
   end
 
   defp process_lines([], output), do: output
-  defp process_lines([[_, index, "INDI", _] | rest], output) do
-    {lines, output} = process_person(rest, %{id: index}, output)
+  defp process_lines([[level, index, "INDI", _] | rest], output) do
+    {lines, output} = process_person(rest, level, %{id: index}, output)
     process_lines(lines, output)
   end
 
@@ -51,21 +51,31 @@ defmodule GedcomParser do
   end
 
   # Person processing
-  defp process_person([["1", _, tag, data] | rest], person, output) when tag in @fact_tags do
+  defp process_person([[level, _, tag, data] | rest], prev_level, person, output) when tag in @fact_tags do
     person =
       if Map.has_key?(@fact_transforms, tag),
         do: Map.put(person, @tag_to_atom[tag], @fact_transforms[tag].(data)),
       else: person
 
     {lines, fact} = process_person_fact(rest, %{person_id: person.id, type: @tag_to_fact_type[tag]})
-    process_person(lines, person, Map.put(output, :person_facts, [fact|output.person_facts]))
+    process_person(lines, level, person, Map.put(output, :person_facts, [fact|output.person_facts]))
   end
 
-  defp process_person([["1", _, tag, data] = line | rest], person, output) do
-    process_person(rest, Map.put(person, @tag_to_atom[tag], data), output)
+  defp process_person([[level, _, tag, data] = line | rest], prev_level, person, output) do
+    process_person(rest, level, Map.put(person, @tag_to_atom[tag], data), output)
   end
 
-  defp process_person([["0", _, _, _]| _] = lines, person, output) do
+  defp process_person([[level, _, _, _]| _] = lines, prev_level, person, output) when level < prev_level do
+    {lines, Map.put(output, :persons, [person | output.persons])}
+  end
+
+  defp process_person([[level, index, tag, data]| rest], prev_level, person, output) when level < prev_level do
+    # Don't recognise the tag, so ignore
+    IO.inspect("Unknown tag: #{index} #{tag} #{data}")
+    process_person(rest, level, person, output)
+  end
+
+  defp process_person([] = lines, _, person, output) do
     {lines, Map.put(output, :persons, [person | output.persons])}
   end
 
