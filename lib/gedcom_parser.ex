@@ -57,7 +57,7 @@ defmodule GedcomParser do
         do: Map.put(person, @tag_to_atom[tag], @fact_transforms[tag].(data)),
       else: person
 
-    {lines, fact} = process_person_fact(rest, %{person_id: person.id, type: @tag_to_fact_type[tag]})
+    {lines, fact} = process_person_fact(rest, level, %{person_id: person.id, type: @tag_to_fact_type[tag]})
     process_person(lines, level, person, Map.put(output, :person_facts, [fact|output.person_facts]))
   end
 
@@ -80,10 +80,10 @@ defmodule GedcomParser do
   end
 
   # Person fact processing
-  defp process_person_fact([["2", _, tag, data] | rest], fact) do
-    process_person_fact(rest, Map.put(fact, @tag_to_atom[tag], data))
+  defp process_person_fact([[level, _, tag, data] | rest], prev_level, fact) when level == prev_level do
+    process_person_fact(rest, level, Map.put(fact, @tag_to_atom[tag], data))
   end
-  defp process_person_fact(lines, fact) do
+  defp process_person_fact([[level, _, _, _] | _] = lines, prev_level, fact) do
     {lines, fact}
   end
 end
